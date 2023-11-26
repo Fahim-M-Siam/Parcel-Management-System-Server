@@ -133,7 +133,7 @@ async function run() {
       }
     );
 
-    // booking related api
+    // user booking related api
     app.post("/bookings", async (req, res) => {
       const bookingItem = req.body;
       const result = await bookingCollection.insertOne(bookingItem);
@@ -145,6 +145,71 @@ async function run() {
       const result = await bookingCollection.find(query).toArray();
       res.send(result);
     });
+
+    // admin routes related api
+
+    // all parcel api
+    app.get("/allBookings", verifyToken, verifyAdmin, async (req, res) => {
+      const result = await bookingCollection.find().toArray();
+      res.send(result);
+    });
+    // serching bookings method api
+    app.get(
+      "/bookingsByDateRange",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        try {
+          const { fromDate, toDate } = req.query;
+          const dateRangeQuery = {
+            requestedDate: {
+              $gte: new Date(fromDate),
+              $lte: new Date(toDate),
+            },
+          };
+          const bookings = await bookingCollection
+            .find(dateRangeQuery)
+            .toArray();
+
+          res.json(bookings);
+        } catch (error) {
+          console.error("Error fetching bookings by date range:", error);
+          res.status(500).send("Internal Server Error");
+        }
+      }
+    );
+
+    // all users api
+    app.get("/allUsers", async (req, res) => {
+      const type = req.query.type;
+      const query = { type: type };
+      const result = await userCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // modifying booking with deliveryMen
+    app.put("/allBookings", async (req, res) => {
+      const updated = req.body;
+      const id = req.query.id;
+      const query = { _id: new ObjectId(id) };
+      const upsert = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          status: updated.status,
+          approximateDate: updated.approximateDate,
+          deliveryMenId: updated.deliverMenId,
+        },
+      };
+
+      const result = await bookingCollection.updateOne(
+        query,
+        updatedDoc,
+        upsert
+      );
+      res.send(result);
+    });
+
+    // admin routes related api
 
     // await client.connect();
     // await client.db("admin").command({ ping: 1 });
