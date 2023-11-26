@@ -1,3 +1,4 @@
+// @ts-nocheck
 const express = require("express");
 const app = express();
 const cors = require("cors");
@@ -9,7 +10,7 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.zdityrz.mongodb.net/?retryWrites=true&w=majority`;
 
 const client = new MongoClient(uri, {
@@ -26,28 +27,31 @@ async function run() {
     const userCollection = client.db("ShipEaseDB").collection("users");
     const bookingCollection = client.db("ShipEaseDB").collection("bookings");
 
-    // auth related api
-    app.post("/jwt", async (req, res) => {
-      const user = req.body;
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "10h",
-      });
-      res.send({ token });
-    });
-
     // jwt middleware
     const verifyToken = (req, res, next) => {
       if (!req.headers.authorization) {
-        return res.status(401).send({ message: "Unauthorized" });
+        return res.status(401).send({ message: "Unauthorized Access" });
       }
       const token = req.headers.authorization.split(" ")[1];
       jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
         if (err) {
-          return res.status(401).send({ message: "Unauthorized" });
+          return res.status(401).send({ message: "Unauthorized Access" });
         }
         req.decoded = decoded;
         next();
       });
+    };
+
+    // verifyAdmin
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.type === "admin";
+      if (!isAdmin) {
+        return res.status(403).send({ message: "Forbidden Access" });
+      }
+      next();
     };
 
     //user related api
@@ -62,10 +66,58 @@ async function run() {
       res.send(result);
     });
 
+    // auth related api
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "10h",
+      });
+      res.send({ token });
+    });
+
+    // admin checking
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "Forbidden Access" });
+      }
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.type === "admin";
+      }
+      res.send({ admin });
+    });
+
+    // make admin api
+    app.patch(
+      "/users/admin/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updatedDoc = {
+          $set: {
+            type: "admin",
+          },
+        };
+        const result = await userCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+      }
+    );
+
     // booking related api
     app.post("/bookings", async (req, res) => {
       const bookingItem = req.body;
       const result = await bookingCollection.insertOne(bookingItem);
+      res.send(result);
+    });
+    app.get("/bookings", verifyToken, async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await bookingCollection.find(query).toArray();
       res.send(result);
     });
 
