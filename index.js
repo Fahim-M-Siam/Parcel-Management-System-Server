@@ -53,6 +53,17 @@ async function run() {
       }
       next();
     };
+    // verifyDeliveryMen
+    const verifyDeliveryMen = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isDeliveryMen = user?.type === "DeliveryMen";
+      if (!isDeliveryMen) {
+        return res.status(403).send({ message: "Forbidden Access" });
+      }
+      next();
+    };
 
     //user related api
     app.post("/users", async (req, res) => {
@@ -88,6 +99,20 @@ async function run() {
         admin = user?.type === "admin";
       }
       res.send({ admin });
+    });
+    // deliveryMen checking
+    app.get("/users/deliveryMen/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "Forbidden Access" });
+      }
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let deliveryMen = false;
+      if (user) {
+        deliveryMen = user?.type === "DeliveryMen";
+      }
+      res.send({ deliveryMen });
     });
 
     // make admin api
