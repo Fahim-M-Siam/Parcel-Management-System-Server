@@ -101,6 +101,7 @@ async function run() {
       res.send({ admin });
     });
     // deliveryMen checking
+
     app.get("/users/deliveryMen/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       if (email !== req.decoded.email) {
@@ -132,6 +133,23 @@ async function run() {
         res.send(result);
       }
     );
+    // make delivery api
+    app.patch(
+      "/users/deliveryMen/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updatedDoc = {
+          $set: {
+            type: "DeliveryMen",
+          },
+        };
+        const result = await userCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+      }
+    );
 
     // user booking related api
     app.post("/bookings", async (req, res) => {
@@ -145,6 +163,19 @@ async function run() {
       const result = await bookingCollection.find(query).toArray();
       res.send(result);
     });
+    //  get parcel item to update
+    app.get("/bookings/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookingCollection.findOne(query);
+      res.send(result);
+    });
+    app.delete("/bookings/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookingCollection.deleteOne(query);
+      res.send(result);
+    });
 
     // admin routes related api
 
@@ -153,34 +184,9 @@ async function run() {
       const result = await bookingCollection.find().toArray();
       res.send(result);
     });
-    // serching bookings method api
-    app.get(
-      "/bookingsByDateRange",
-      verifyToken,
-      verifyAdmin,
-      async (req, res) => {
-        try {
-          const { fromDate, toDate } = req.query;
-          const dateRangeQuery = {
-            requestedDate: {
-              $gte: new Date(fromDate),
-              $lte: new Date(toDate),
-            },
-          };
-          const bookings = await bookingCollection
-            .find(dateRangeQuery)
-            .toArray();
-
-          res.json(bookings);
-        } catch (error) {
-          console.error("Error fetching bookings by date range:", error);
-          res.status(500).send("Internal Server Error");
-        }
-      }
-    );
 
     // all users api
-    app.get("/allUsers", async (req, res) => {
+    app.get("/allUsers", verifyToken, verifyAdmin, async (req, res) => {
       const type = req.query.type;
       const query = { type: type };
       const result = await userCollection.find(query).toArray();
@@ -188,7 +194,7 @@ async function run() {
     });
 
     // modifying booking with deliveryMen
-    app.put("/allBookings", async (req, res) => {
+    app.put("/allBookings", verifyToken, verifyAdmin, async (req, res) => {
       const updated = req.body;
       const id = req.query.id;
       const query = { _id: new ObjectId(id) };
@@ -210,6 +216,20 @@ async function run() {
     });
 
     // admin routes related api
+
+    // delivermen routes related api
+
+    app.get(
+      "/allDeliveryBookings",
+      verifyToken,
+      verifyDeliveryMen,
+      async (req, res) => {
+        const id = req.query.id;
+        const query = { deliveryMenId: id };
+        const result = await bookingCollection.find(query).toArray();
+        res.send(result);
+      }
+    );
 
     // await client.connect();
     // await client.db("admin").command({ ping: 1 });
