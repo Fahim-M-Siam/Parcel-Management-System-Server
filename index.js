@@ -218,7 +218,6 @@ async function run() {
     // admin routes related api
 
     // delivermen routes related api
-
     app.get(
       "/allDeliveryBookings",
       verifyToken,
@@ -227,6 +226,54 @@ async function run() {
         const id = req.query.id;
         const query = { deliveryMenId: id };
         const result = await bookingCollection.find(query).toArray();
+        res.send(result);
+      }
+    );
+    // updating cancel status
+    app.put(
+      "/allDeliveryBookings",
+      verifyToken,
+      verifyDeliveryMen,
+      async (req, res) => {
+        const updated = req.body;
+        const id = req.query.id;
+        const query = { _id: new ObjectId(id) };
+        const upsert = { upsert: true };
+        const updatedDoc = {
+          $set: {
+            status: updated.status,
+          },
+        };
+
+        const result = await bookingCollection.updateOne(
+          query,
+          updatedDoc,
+          upsert
+        );
+        res.send(result);
+      }
+    );
+    // updating delivered status
+    app.put(
+      "/allDeliveryBookings",
+      verifyToken,
+      verifyDeliveryMen,
+      async (req, res) => {
+        const updated = req.body;
+        const id = req.query.id;
+        const query = { _id: new ObjectId(id) };
+        const upsert = { upsert: true };
+        const updatedDoc = {
+          $set: {
+            status: updated.status,
+          },
+        };
+
+        const result = await bookingCollection.updateOne(
+          query,
+          updatedDoc,
+          upsert
+        );
         res.send(result);
       }
     );
