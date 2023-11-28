@@ -76,6 +76,20 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
+    app.get("/registeredUsers", async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+    app.get("/homeAllBookings", async (req, res) => {
+      const result = await bookingCollection.find().toArray();
+      res.send(result);
+    });
+    app.get("/allDelivered", async (req, res) => {
+      const status = req.query.status;
+      const query = { status: status };
+      const result = await bookingCollection.find(query).toArray();
+      res.send(result);
+    });
 
     // auth related api
     app.post("/jwt", async (req, res) => {
