@@ -170,6 +170,33 @@ async function run() {
       const result = await bookingCollection.findOne(query);
       res.send(result);
     });
+    app.patch("/bookings/:id", async (req, res) => {
+      const updatedBookingItem = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          userName: updatedBookingItem.userName,
+          email: updatedBookingItem.email,
+          userNumber: updatedBookingItem.userNumber,
+          parcelType: updatedBookingItem.parcelType,
+          parcelWeight: updatedBookingItem.parcelWeight,
+          price: updatedBookingItem.price,
+          receiverName: updatedBookingItem.receiverName,
+          receiverNumber: updatedBookingItem.receiverNumber,
+          requestedDate: updatedBookingItem.requestedDate,
+          receiverAddress: updatedBookingItem.receiverAddress,
+          locationLatitude: updatedBookingItem.locationLatitude,
+          locationLongtitude: updatedBookingItem.locationLongtitude,
+          approximateDate: updatedBookingItem.approximateDate,
+          deliveryMenId: updatedBookingItem.deliveryMenId,
+          bookingDate: updatedBookingItem.bookingDate,
+          status: updatedBookingItem.status,
+        },
+      };
+      const result = await bookingCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
     app.delete("/bookings/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
