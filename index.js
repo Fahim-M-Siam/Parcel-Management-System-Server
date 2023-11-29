@@ -26,6 +26,7 @@ async function run() {
     // DBCollections
     const userCollection = client.db("ShipEaseDB").collection("users");
     const bookingCollection = client.db("ShipEaseDB").collection("bookings");
+    const reviewCollection = client.db("ShipEaseDB").collection("reviews");
 
     // jwt middleware
     const verifyToken = (req, res, next) => {
@@ -229,9 +230,14 @@ async function run() {
     // all users api
     app.get("/allUsers", verifyToken, verifyAdmin, async (req, res) => {
       const type = req.query.type;
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const skip = page * size;
       const query = { type: type };
-      const result = await userCollection.find(query).toArray();
-      res.send(result);
+      const result = await userCollection.find(query).skip(skip).limit(size);
+      const users = await result.toArray();
+      const userCount = await userCollection.countDocuments();
+      res.send({ users, userCount });
     });
 
     // modifying booking with deliveryMen
@@ -270,6 +276,7 @@ async function run() {
         res.send(result);
       }
     );
+
     // updating cancel status
     app.put(
       "/allDeliveryBookings",
@@ -318,6 +325,20 @@ async function run() {
         res.send(result);
       }
     );
+
+    // individual user api
+    app.get("/individualUser", async (req, res) => {
+      const query = req.query.email;
+      const result = await userCollection.findOne({ email: query });
+      res.send(result);
+    });
+
+    // review related api
+    app.post("/review", async (req, res) => {
+      const reviewItem = req.body;
+      const result = await reviewCollection.insertOne(reviewItem);
+      res.send(result);
+    });
 
     // await client.connect();
     // await client.db("admin").command({ ping: 1 });
