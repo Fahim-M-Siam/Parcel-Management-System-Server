@@ -117,8 +117,8 @@ async function run() {
     });
     // deliveryMen checking
 
-    app.get("/users/deliveryMen/:email", verifyToken, async (req, res) => {
-      const email = req.params.email;
+    app.get("/users/deliveryMen", verifyToken, async (req, res) => {
+      const email = req.query.email;
       if (email !== req.decoded.email) {
         return res.status(403).send({ message: "Forbidden Access" });
       }
@@ -239,6 +239,13 @@ async function run() {
       const userCount = await userCollection.countDocuments();
       res.send({ users, userCount });
     });
+    // all deliverymen api
+    app.get("/allDeliveryMen", verifyToken, verifyAdmin, async (req, res) => {
+      const type = req.query.type;
+      const query = { type: type };
+      const result = await userCollection.find(query).toArray();
+      res.send(result);
+    });
 
     // modifying booking with deliveryMen
     app.put("/allBookings", verifyToken, verifyAdmin, async (req, res) => {
@@ -332,11 +339,59 @@ async function run() {
       const result = await userCollection.findOne({ email: query });
       res.send(result);
     });
-
+    app.put("/individualUser", async (req, res) => {
+      const document = req.body;
+      const email = req.query.email;
+      const query = { email: email };
+      const upsert = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          averageRating: document?.averageRating,
+        },
+      };
+      const result = await userCollection.updateOne(query, updatedDoc, upsert);
+      res.send(result);
+    });
     // review related api
     app.post("/review", async (req, res) => {
       const reviewItem = req.body;
       const result = await reviewCollection.insertOne(reviewItem);
+      res.send(result);
+    });
+    app.get("/review", async (req, res) => {
+      const email = req.query.email;
+      const query = { deliveryMenId: email };
+      const result = await reviewCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // top deliveryMen
+    app.get("/homeAllDeliveryMen", async (req, res) => {
+      const type = req.query.type;
+      const query = { type: type };
+      const result = await userCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.put("/topDeliveryMen", async (req, res) => {
+      const document = req.body;
+      const email = req.query.email;
+      const query = { email: email };
+      const upsert = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          deliveredCount: document?.deliveredCount,
+        },
+      };
+      const result = await userCollection.updateOne(query, updatedDoc, upsert);
+      res.send(result);
+    });
+
+    app.get("/topDeliveryMen", async (req, res) => {
+      const result = await userCollection
+        .find({ type: "DeliveryMen" })
+        .sort({ deliveredCount: -1, averageRating: -1 })
+        .limit(5)
+        .toArray();
       res.send(result);
     });
 
